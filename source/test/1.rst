@@ -1,0 +1,164 @@
+0 初始数据：
+============
+
+\|——dem数据
+
+----|——中国全国dem数据
+
+--------|——**China.tif // 分辨率为0.01°**
+
+\|——行政规划数据
+
+----|——县级数据
+
+--------|——**县级数据.shp**
+
+----|——省级数据
+
+--------|——**全国省界.shp**
+
+1 操作环境：
+============
+
+Win10
+
+Arcgis10.7
+
+2 操作步骤（以七省一市为例）
+============================
+
+2.1 提取7省1市shp：
+-------------------
+
+1. 打开Arcgis，右键Layers，Add data导入全国省界.shp。
+
+2. 打开ArcToolbox，选择Analysis Tools/Extract/Select，其中，Input
+   Features选择全国省界.shp，Output Feature Class
+   为自定义输出文件路径，Expression为选择语句，如我们做七省一市的语句是：
+
+"NAME" = '福建省' OR
+
+"NAME" = '辽宁省' OR
+
+"NAME" = '江苏省' OR
+
+"NAME" = '浙江省' OR
+
+"NAME" = '安徽省' OR
+
+"NAME" = '江西省' OR
+
+"NAME" = '上海市' OR
+
+"NAME" = '山东省'
+
+点击确定，生成七省一市.shp
+
+2.2 提取各个县市shp：
+---------------------
+
+1. 导入县级数据.shp和七省一市.shp。
+
+2. 打开ArcToolbox，选择Analysis Tools/Extract/Clip，其中，Input
+   Features选择县级数据.shp，Clip Features选择七省一市.shp，Output
+   Feature Class为自定义输出路径，点击确定，生成七省一市县.shp，如下：
+
+|image1|
+
+2.3 提取各个县市dem：
+---------------------
+
+1. 导入七省一市县.shp和china.tif。
+
+2. 打开ArcToolbox，选择Spatial Analyst Tools/Extraction/Extract by
+   Mask，其中，Input Raster选择china.tif，Input raster or feature mask
+   data选择七省一市县.shp（或七省一市.shp），Output
+   Raster为自定义输出路径，输出格式为默认raster，生成七省一市县dem，如下：
+
+|image2|
+
+2.4 填洼
+--------
+
+1. 导入七省一市县dem。
+
+2. 打开ArcToolbox，选择Spatial Analyst Tools/Hydrology/Fill，其中，Input
+   surface raster选择七省一市县dem，Output surface
+   raster为自定义输出路径，输出格式为默认raster，得到七省一市县填洼。
+
+2.5 流向分析
+------------
+
+1. 导入七省一市县填洼。
+
+2. 打开ArcToolbox，选择Spatial Analyst Tools/Hydrology/Flow
+   Direction，其中，Input surface raster选择七省一市县填洼，Output flow
+   direction raster为自定义输出路径，勾选Force all edge cells to flow
+   outward(optional)，输出格式为默认raster，得到七省一市县流向。
+
+2.6 汇流分析
+------------
+
+1. 导入七省一市县流向。
+
+2. 打开ArcToolbox，选择Spatial Analyst Tools/Hydrology/Flow
+   Accumulation，其中，Input flow direction raster选择七省一市县流向，
+   Output accumulation
+   raster为自定义输出路径，输出格式为默认raster，得到七省一市县汇流。
+
+   7. .. rubric:: 水网生成
+         :name: 水网生成
+
+1. 导入七省一市县汇流。
+
+2. 打开ArcToolbox，选择Spatial Analyst Tools/Map Algebra/Raster
+   Calculator，计算公式为：Con("七省一市县汇流" >3,1)，Output
+   raster为自定义输出路径，输出格式为默认raster，得到七省一市县水网。
+
+注意：雨水流速为0.3m/s，也就是1km/h，考虑七省一市项目的降雨数据的时间分辨率为1h，空间分辨率为1km，定义图上相邻格点的距离为曼哈顿距离1，以每个格点为圆心，曼哈顿距离1为半径（半径等于雨水流速乘以时间分辨率所换算成的曼哈顿距离），所得到的圆形区域包含的格点数即为阈值，本文例子中的计算结果是3，不同处理方式、不同影像分辨率会有不同的计算结果。
+
+水网链
+------
+
+1. 导入七省一市县流向，七省一市县水网。
+
+2. 打开ArcToolbox，选择Spatial Analyst Tools/Hydrology/Stream
+   Link，其中，Input stream raster为七省一市县水网，Input flow direction
+   raster为七省一市县流向，Output
+   raster为自定义输出路径，输出格式为默认raster，得到七省一市县水网链。
+
+   7. .. rubric:: 集水区生成
+         :name: 集水区生成
+
+1. 导入七省一市县流向，七省一市县水网链。
+
+2. 打开ArcToolbox，选择Spatial Analyst
+   Tools/Hydrology/Watershed，其中，Input flow direction
+   raster为七省一市县流向，Input raster or feature pour point
+   data为七省一市县水网链，Output
+   raster为自定义输出路径，输出格式为默认raster，得到七省一市县集水区，如下：
+
+|image3|\ |image4|
+
+其中，左侧为整体图，右侧为局部图，每一个色斑都是一个集水区。
+
+**注意：**\ 在上述任意步骤中，如果出现处理失败，报错99999，则可能是内存不够导致的，需进行以下处理：
+
+1. 在处理的配置界面中，点击Environment Settings，点击Parallel
+   Processing，在Parallel Processing
+   Factor中填写0，点击确认，再确认，得到处理结果，这一步的作用是禁止并行处理。
+
+2. 处理完成之后，需重启arcgis以释放内存，否则接下来会持续卡顿。
+
+.. |image1| image:: media/image1.png
+   :width: 3.17979in
+   :height: 3.67708in
+.. |image2| image:: media/image2.png
+   :width: 2.55208in
+   :height: 4.01515in
+.. |image3| image:: media/image3.png
+   :width: 2.06001in
+   :height: 3.26042in
+.. |image4| image:: media/image4.png
+   :width: 3.46875in
+   :height: 3.22486in
