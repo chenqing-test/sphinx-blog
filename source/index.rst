@@ -11,6 +11,7 @@ Welcome to sphinx-blog's documentation!
    :glob:
 
    test/index
+   1
 
 Indices and tables
 ==================
